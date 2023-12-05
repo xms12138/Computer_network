@@ -10,18 +10,19 @@ ICMP_Type_Unreachable = 3  # unacceptable host
 ICMP_Type_Overtime = 11  # request overtime
 ID = 0  # ID of icmp_header
 SEQUENCE = 0  # sequence of ping_request_msg
+big_end_sequence = '!bbHHh'
 
 
 def checksum(strings):
     csum = 0
-    countTo = (len(strings) / 2) * 2
-    count = 0
-    while count < countTo:
-        thisVal = strings[count + 1] * 256 + strings[count]
-        csum = csum + thisVal
+    count_to = (len(strings) / 2) * 2
+    counts = 0
+    while counts < count_to:
+        this_val = strings[counts + 1] * 256 + strings[counts]
+        csum = csum + this_val
         csum = csum & 0xffffffff
-        count = count + 2
-    if countTo < len(strings):
+        counts = counts + 2
+    if count_to < len(strings):
         csum = csum + strings[len(strings) - 1]
         csum = csum & 0xffffffff
     csum = (csum >> 16) + (csum & 0xffff)
@@ -32,46 +33,47 @@ def checksum(strings):
     return answer
 
 
-def receiveOnePing(icmpSocket, ID, timeout):
+def receive_one_ping(icmp_socket, id_number, time_out):
     # 1. Wait for the socket to receive a reply
-    timeBeginReceive = time.time()
-    whatReady = select.select([icmpSocket], [], [], timeout)
-    timeInRecev = time.time() - timeBeginReceive
-    if not whatReady[0]:
+    time_begin_receive = time.time()
+    if_got = select.select([icmp_socket], [], [], time_out)
+    time_during_receive = time.time() - time_begin_receive
+    if not if_got[0]:
         return -1
-    timeReceived = time.time()
-    # 2. Once received, record time of receipt, otherwise, handle a timeout
-    recPacket, addr = icmpSocket.recvfrom(1024)
+    time_received = time.time()
+    # 2. Once received, record time of receipt, otherwise, handle a time_out
+    rec_packet, _ = (icmp_socket.recvfrom(1024))
     # 3. Compare the time of receipt to time of sending, producing the total network delay
     byte_in_double = struct.calcsize("!d")
-    timeSent = struct.unpack("!d", recPacket[28: 28 + byte_in_double])[0]
-    totalDelay = timeReceived - timeSent
-    # 4. Unpack the packet header for useful information, including the ID
-    rec_header = recPacket[20:28]
-    replyType, replyCode, replyCkecksum, replyId, replySequence = struct.unpack('!bbHHh', rec_header)
-    # 5. Check that the ID matches between the request and reply
-    if ID == replyId and replyType == ICMP_ECHO_REPLY:
+    time_sent = struct.unpack("!d", rec_packet[28: 28 + byte_in_double])[0]
+    total_delay = time_received - time_sent
+    # 4. Unpack the packet header for useful information, including the id_number
+    rec_header = rec_packet[20:28]
+    reply_type, _, _, reply_id, _ = struct.unpack(big_end_sequence, rec_header)
+
+    # 5. Check that the id_number matches between the request and reply
+    if id_number == reply_id and reply_type == ICMP_ECHO_REPLY:
         # 6. Return total network delay
-        return totalDelay
-    elif timeInRecev > timeout or replyType == ICMP_Type_Overtime:
-        return -11  # ttl overtime/timeout
-    elif replyType == ICMP_Type_Unreachable:
+        return total_delay
+    elif time_during_receive > time_out or reply_type == ICMP_Type_Overtime:
+        return -11  # ttl overtime/time_out
+    elif reply_type == ICMP_Type_Unreachable:
         return -3  # unreachable
     else:
         print("request over time")
         return -1
 
 
-def sendOnePing(icmpSocket, destinationAddress, ID):
+def send_one_ping(icmp_socket, destination_address, id_number):
     icmp_checksum = 0
     # 1. Build ICMP header
-    icmp_header = struct.pack('!bbHHh', ICMP_ECHO_REQUEST, 0, icmp_checksum, ID, SEQUENCE)
+    icmp_header = struct.pack(big_end_sequence, ICMP_ECHO_REQUEST, 0, icmp_checksum, id_number, SEQUENCE)
 
     # 这个部分使用 struct.pack 函数将多个值打包成二进制数据。具体来说，'!bbHHh' 是格式字符串，指定了将要打包的数据的类型和顺序。按顺序解释：
     # ICMP_ECHO_REQUEST: 对应 'b'，一个字节，表示 ICMP 报文的类型。
     # 0: 对应 'b'，一个字节，表示 ICMP 报文的代码。
     # icmp_checksum: 对应 'H'，一个无符号短整型，表示校验和（checksum）。
-    # ID: 对应 'H'，一个无符号短整型，表示标识符（ID）。
+    # id_number: 对应 'H'，一个无符号短整型，表示标识符（id_number）。
     # SEQUENCE: 对应 'h'，一个有符号短整型，表示序列号（SEQUENCE）。
     # 这个 struct.pack 操作的结果是将这些数值以二进制形式打包成一个 ICMP 请求报文的头部。
     time_send = struct.pack('!d', time.time())
@@ -81,59 +83,57 @@ def sendOnePing(icmpSocket, destinationAddress, ID):
     # 2. Checksum ICMP packet using given function
     icmp_checksum = checksum(icmp_header + time_send)
     # 3. Insert checksum into packet
-    icmp_header = struct.pack('!bbHHh', ICMP_ECHO_REQUEST, 0, icmp_checksum, ID, SEQUENCE)
-
-
+    icmp_header = struct.pack('!bbHHh', ICMP_ECHO_REQUEST, 0, icmp_checksum, id_number, SEQUENCE)
     # 4. Send packet using socket
     icmp_packet = icmp_header + time_send
-    icmpSocket.sendto(icmp_packet, (destinationAddress, 80))
-    # 使用 icmpSocket 套接字对象发送 ICMP 请求报文 (icmp_packet) 到指定的目标地址和端口。
+    icmp_socket.sendto(icmp_packet, (destination_address, 80))
+    # 使用 icmp_socket 套接字对象发送 ICMP 请求报文 (icmp_packet) 到指定的目标地址和端口。
 
 
-def doOnePing(destinationAddress, timeout):  # destinationAddress是目的服务器的ip地址
+def do_one_ping(destination_address, time_out):  # destinationAddress是目的服务器的ip地址
     # 1. Create ICMP socket
-    icmpName = socket.getprotobyname('icmp')
+    icmp_name = socket.getprotobyname('icmp')
     # 这个函数根据协议名称（'icmp'）获取协议号。在这里，它获取 ICMP 协议的协议号。
-    icmp_Socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmpName)
+    icmp_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp_name)
     # 这个语句创建了一个新的套接字。参数 socket.AF_INET 指定了地址族（IPv4），socket.SOCK_RAW 表示这是一个原始套接字，而 icmpName 参数指定了使用的协议（ICMP）。
 
     # 2. Call sendOnePing function
-    sendOnePing(icmp_Socket, destinationAddress, ID)
+    send_one_ping(icmp_socket, destination_address, ID)
     # 3. Call receiveOnePing function
-    totalDelay = receiveOnePing(icmp_Socket, ID, timeout)
+    total_delay = receive_one_ping(icmp_socket, ID, time_out)
     # 4. Close ICMP socket
-    icmp_Socket.close()
+    icmp_socket.close()
     # 5. Return total network delay
-    return totalDelay
+    return total_delay
 
 
-def ping(host, count, timeout):
+def ping(host, counts, time_out):
     send = 0
     lost = 0
     receive = 0
-    maxTime = 0
-    minTime = 1000
-    sumTime = 0
+    max_time = 0
+    min_time = 1000
+    sum_time = 0
     # 1. Look up hostname, resolving it to an IP address
-    desIp = socket.gethostbyname(host)
+    destination_ip = socket.gethostbyname(host)
     global ID
     ID = os.getpid()
     # 使用 Python 的 os 模块中的 getpid() 函数获取当前进程的进程ID（Process ID）
-    for i in range(0, count):
+    for i in range(0, counts):
         global SEQUENCE
         SEQUENCE = i
         # 2. Call doOnePing function, approximately every second
-        delay = doOnePing(desIp, timeout) * 1000
+        delay = do_one_ping(destination_ip, time_out) * 1000
         send += 1
         if delay > 0:
             receive += 1
-            if maxTime < delay:
-                maxTime = delay
-            if minTime > delay:
-                minTime = delay
-            sumTime += delay
+            if max_time < delay:
+                max_time = delay
+            if min_time > delay:
+                min_time = delay
+            sum_time += delay
             # 3. Print out the returned delay
-            print("Receive from: " + str(desIp) + ", delay = " + str(int(delay)) + "ms")
+            print("Receive from: " + str(destination_ip) + ", delay = " + str(int(delay)) + "ms")
         else:
             lost += 1
             print("Fail to connect. ", end="")
@@ -147,14 +147,17 @@ def ping(host, count, timeout):
                 # otherwise, overtime
                 print("Request overtime.")
         time.sleep(1)
-    # 4. Continue this process until stopped
+    printing(receive, sum_time, send, lost, max_time, min_time)
+
+
+def printing(receive, sum_time, send, lost, max_time, min_time):
     if receive != 0:
-        avgTime = sumTime / receive
-        recvRate = receive / send * 100.0
+        avg_time = sum_time / receive
+        recv_rate = receive / send * 100.0
         print(
-            "\nSend: {0}, success: {1}, lost: {2}, rate of success: {3}%.".format(send, receive, lost, recvRate))
+            "\nSend: {0}, success: {1}, lost: {2}, rate of success: {3}%.".format(send, receive, lost, recv_rate))
         print(
-            "MaxTime = {0}ms, MinTime = {1}ms, AvgTime = {2}ms".format(int(maxTime), int(minTime), int(avgTime)))
+            "MaxTime = {0}ms, MinTime = {1}ms, AvgTime = {2}ms".format(int(max_time), int(min_time), int(avg_time)))
     else:
         print("\nSend: {0}, success: {1}, lost: {2}, rate of success: 0.0%".format(send, receive, lost))
 
