@@ -4,6 +4,7 @@ import time
 import select
 import socket
 
+
 ICMP_ECHO_REQUEST = 8  # ICMP type code for echo request messages
 ICMP_ECHO_REPLY = 0  # ICMP type code for echo reply messages
 ICMP_Type_Unreachable = 3  # unacceptable host
@@ -40,6 +41,7 @@ def receive_one_ping(icmp_socket, id_number, time_out):
     time_during_receive = time.time() - time_begin_receive
     if not if_got[0]:
         return -1
+    # 如果 if_got[0] 为假（表示在超时时间内没有可读事件发生），则返回 -1。这可能表示接收操作超时，没有接收到数据。
     time_received = time.time()
     # 2. Once received, record time of receipt, otherwise, handle a time_out
     rec_packet, _ = (icmp_socket.recvfrom(1024))
@@ -96,7 +98,6 @@ def do_one_ping(destination_address, time_out):  # destinationAddress是目的�
     # 这个函数根据协议名称（'icmp'）获取协议号。在这里，它获取 ICMP 协议的协议号。
     icmp_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp_name)
     # 这个语句创建了一个新的套接字。参数 socket.AF_INET 指定了地址族（IPv4），socket.SOCK_RAW 表示这是一个原始套接字，而 icmpName 参数指定了使用的协议（ICMP）。
-
     # 2. Call sendOnePing function
     send_one_ping(icmp_socket, destination_address, ID)
     # 3. Call receiveOnePing function

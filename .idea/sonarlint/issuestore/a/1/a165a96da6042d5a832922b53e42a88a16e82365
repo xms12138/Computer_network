@@ -1,2 +1,5 @@
 
-zpython:S1186#"[Add a nested comment explaining why this function is empty, or complete the implementation.(¿û8Ñõ—ÕÃ1
+ypython:S1192o"ZDefine a constant instead of duplicating this literal "  %d    rtt=%.0f ms    %s" 3 times.(ãç»8‡¶ÇûÃ1
+Hpython:S1481C")Remove the unused local variable "tries".(Úßö¯8‡¶ÇûÃ1
+xpython:S3776>"TRefactor this function to reduce its Cognitive Complexity from 20 to the 15 allowed.(…Óþªþÿÿÿÿ8‡¶ÇûÃ1
+<python:S125f"Remove this commented out code.(’¤±8îšøüÃ1
