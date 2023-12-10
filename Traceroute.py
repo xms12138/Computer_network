@@ -126,4 +126,4 @@ def get_route(hostname):
 
 if __name__ == '__main__':
     # 调用get_route函数进行traceroute，目标是baidu.com
-    get_route("lancaster.com")
+    get_route("baidu.com")
