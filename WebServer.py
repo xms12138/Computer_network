@@ -1,5 +1,6 @@
 import socket
 
+
 def handle_request(request):
     # 解析请求
     request_lines = request.split('\r\n')
@@ -8,7 +9,6 @@ def handle_request(request):
     # 获取请求的方法、路径和协议版本
     method = request_line[0]
     path = request_line[1]
-    protocol = request_line[2]
 
     # 处理 GET 请求
     if method == 'GET':
@@ -28,15 +28,16 @@ def handle_request(request):
 
     return response
 
-def start_server(host, port):
+
+def start_server(host1, port1):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((host, port))
+    server_socket.bind((host1, port1))
     server_socket.listen(1)
 
-    print(f"Serving on {host}:{port}...")
+    print(f"Serving on {host1}:{port1}...")
 
     while True:
-        client_socket, client_address = server_socket.accept()
+        client_socket, _ = server_socket.accept()
         request = client_socket.recv(1024)
         # recv(1024): 这是套接字对象的 recv 方法，用于从连接中接收数据。参数 1024 指定一次最多接收的字节数。它表示从连接中尝试接收最多 1024 字节的数据.这里是字节序列
         print(request)
@@ -48,6 +49,7 @@ def start_server(host, port):
         response = handle_request(request)
         client_socket.sendall(response.encode('utf-8'))
         client_socket.close()
+
 
 if __name__ == "__main__":
     host = '127.0.0.1'

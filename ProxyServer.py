@@ -2,66 +2,62 @@ import os
 import socket
 
 
-def handleReq(clientSocket):
-    # recv data
-    # find the fileName
-    # judge if the file named "fileName" if existed
-    # if not exists, send req to get it
-
-    recvData = clientSocket.recv(1024).decode("UTF-8")
-    fileName = recvData.split()[1].split("//")[1].replace('/', '')
-    print("fileName: " + fileName)
-    filePath = "./" + fileName.split(":")[0].replace('.', '_')
+def handle_req(client_socket):
+    recv_data = client_socket.recv(1024).decode("UTF-8")
+    file_name = recv_data.split()[1].split("//")[1].replace('/', '')
+    print("fileName: " + file_name)
+    file_path = "./" + file_name.split(":")[0].replace('.', '_')
     try:
-        file = open(filePath + "./index.html", 'rb')
+        file = open(file_path + "./index.html", 'rb')
         print("File is found in proxy server.")
-        #responseMsg = file.readlines()
-        #for i in range(0, len(responseMsg)):
-           # clientSocket.sendall(responseMsg[i])
-        responseMsg = file.read()
-        clientSocket.sendall(responseMsg)
+        response_msg = file.read()
+        client_socket.sendall(response_msg)
         print("Send, done.")
-    except:
-        print("File is not exist.\nSend request to server...")
+    except FileNotFoundError as e:
+        print(f"File not found: {e}\nSend request to server...")
         try:
-            proxyClientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            serverName = fileName.split(":")[0]
-            proxyClientSocket.connect((serverName, 80))
-            proxyClientSocket.sendall(recvData.encode("UTF-8"))
-            responseMsg = proxyClientSocket.recv(4069)
+            proxy_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server_name = file_name.split(":")[0]
+            proxy_client_socket.connect((server_name, 80))
+            proxy_client_socket.sendall(recv_data.encode("UTF-8"))
+            response_msg = proxy_client_socket.recv(4069)
             print("File is found in server.")
-            clientSocket.sendall(responseMsg)
+            client_socket.sendall(response_msg)
             print("Send, done.")
             # cache
-            if not os.path.exists(filePath):
-                os.makedirs(filePath)
-            cache = open(filePath + "./index.html", 'w')
-            cache.writelines(responseMsg.decode("UTF-8").replace('\r\n', '\n'))
+            if not os.path.exists(file_path):
+                os.makedirs(file_path)
+            cache = open(file_path + "./index.html", 'w')
+            cache.writelines(response_msg.decode("UTF-8").replace('\r\n', '\n'))
             cache.close()
             print("Cache, done.")
-        except:
-            print("Connect timeout.")
+        except Exception as e:
+            print(f"An error occurred: {e}\nConnect timeout.")
+            raise
+
+        raise
 
 
-def startProxy(port):
-    proxyServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    proxyServerSocket.bind(("", port))
-    proxyServerSocket.listen(0)
+def start_proxy(port1):
+    proxy_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    proxy_server_socket.bind(("", port1))
+    proxy_server_socket.listen(0)
     while True:
         try:
             print("Proxy is waiting for connecting...")
-            clientSocket, addr = proxyServerSocket.accept()
+            client_socket, _ = proxy_server_socket.accept()
             print("Connect established")
-            handleReq(clientSocket)
-            clientSocket.close()
+            handle_req(client_socket)
+            client_socket.close()
         except Exception as e:
             print("error: {0}".format(e))
             break
-    proxyServerSocket.close()
+    proxy_server_socket.close()
 
 
 if __name__ == '__main__':
     while True:
+        port = None
         try:
             port = int(input("choose a port number over 1024:"))
         except ValueError:
@@ -73,4 +69,4 @@ if __name__ == '__main__':
                 continue
             else:
                 break
-    startProxy(port)
+    start_proxy(port)

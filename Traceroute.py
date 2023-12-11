@@ -1,7 +1,5 @@
-import os
 import struct
 import time
-import select
 import socket
 from _socket import IPPROTO_IP, IP_TTL
 from socket import timeout
@@ -13,7 +11,8 @@ ICMP_Type_Overtime = 11  # request overtime
 MAX_HOPS = 30
 TIMEOUT = 3  # 设置了每个跳数的超时时间
 big_end_sequence = '!bbHh'
-TRIES = 5  # 每一跳的尝试次数
+TRIES = 3  # 每一跳的尝试次数
+my_array = [0, 0, 0]
 
 
 def checksum(strings):
@@ -69,7 +68,7 @@ def get_route(hostname):
             destination_ip = socket.gethostbyname(hostname)
             icmp_name = socket.getprotobyname('icmp')
             icmp_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp_name)
-            # 设置套接字的超时时间
+            # 设置套接字的超时时间, 若停在rec_packet, addr = (icmp_socket.recvfrom(1024))这行代码，则会触发超时
             icmp_socket.settimeout(TIMEOUT)
             # 绑定套接字到任意端口
             icmp_socket.bind(("", 0))
@@ -82,11 +81,7 @@ def get_route(hostname):
                 t = time.time()
                 # 开始等待响应
                 time_begin_receive = time.time()
-                if_got = select.select([icmp_socket], [], [], TIMEOUT)
                 time_during_receive = time.time() - time_begin_receive
-                # 检查是否超时
-                if not if_got[0]:
-                    print("  *        *        *    Request timed out.")
                 rec_packet, addr = (icmp_socket.recvfrom(1024))
                 # 记录接收时间
                 time_received = time.time()
@@ -94,36 +89,42 @@ def get_route(hostname):
                 time_left = time_left - time_during_receive
                 # 再次检查超时
                 if time_left <= 0:
-                    print("  *        *        *    Request timed out.")
+                    # print("  *        *        *    Request timed out."+" ttl="+ttl+" tries="+tries)
+                    print(f"  *        *        *    Request timed out. ttl={ttl} tries={tries + 1}")
             except timeout:
+                print(f"  *        *        *    Request timed out. ttl={ttl} tries={tries + 1}")
                 # 超时则继续尝试
                 continue
             else:
-                # rec_packet, addr = (icmp_socket.recvfrom(1024))
-                # 提取响应包中的ICMP类型和代码
-                byte_in_double = struct.calcsize("!d")
-                time_sent = struct.unpack("!d", rec_packet[26: 26 + byte_in_double])[0]
-                rec_header = rec_packet[20:26]
-                types, _, _, _ = struct.unpack(big_end_sequence, rec_header)
-                # 根据ICMP类型处理响应
-                if types == 11:
-                    # 类型为11（TTL超时）时计算往返时间
-                    print("  %d    rtt=%.0f ms    %s" % (ttl, (time_received - t) * 1000, addr[0]))
-                elif types == 3:
-                    # 类型为3（目标不可达）时计算往返时间
-                    print("  %d    rtt=%.0f ms    %s" % (ttl, (time_received - t) * 1000, addr[0]))
-                elif types == 0:
-                    # 类型为0（回显应答）时计算往返时间，并结束traceroute
-                    print("  %d    rtt=%.0f ms    %s" % (ttl, (time_received - time_sent) * 1000, addr[0]))
+                printing(rec_packet, ttl, time_received, t, addr, icmp_socket)
+                if destination_ip == addr[0] and tries == 2:
+                    print(f" {hostname} is successfully reached")
                     return
-                else:
-                    # 其他类型打印错误信息
-                    print("error")
-                break
+
             finally:
                 icmp_socket.close()
 
 
+def printing(rec_packet, ttl, time_received, t, addr, icmp_socket):
+    byte_in_double = struct.calcsize("!d")
+    time_sent = struct.unpack("!d", rec_packet[26: 26 + byte_in_double])[0]
+    rec_header = rec_packet[20:26]
+    types, _, _, _ = struct.unpack(big_end_sequence, rec_header)
+    # 根据ICMP类型处理响应
+    if types == 11 or types == 3:
+        # 类型为11（TTL超时）或类型为3（目标不可达）时计算往返时间
+        print(f"  ttl={ttl}    rtt={(time_received - t) * 1000:.0f} ms    {addr[0]}")
+    elif types == 0:
+        # 类型为0（回显应答）时计算往返时间，并结束traceroute
+        print(f"  ttl={ttl}    rtt={(time_received - time_sent) * 1000:.0f} ms    {addr[0]}")
+        icmp_socket.close()
+
+    else:
+        # 其他类型打印错误信息
+        print("error")
+
+
 if __name__ == '__main__':
     # 调用get_route函数进行traceroute，目标是baidu.com
-    get_route("baidu.com")
+    hostName = input("Input ip/name of the host you want: ")
+    get_route(hostName)
