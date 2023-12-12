@@ -1,0 +1,2 @@
+1 使用git log查看id
+2 使用 git reset --hard id回退
