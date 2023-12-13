@@ -3,45 +3,66 @@ import socket
 
 
 def handle_req(client_socket):
+    # proxy使用了client_socket去和客户端通信，proxy_server_socket去监听客户端的请求，使用proxy_client_socket去与服务器沟通
     recv_data = client_socket.recv(1024).decode("UTF-8")
-    file_name = recv_data.split()[1].split("//")[1].replace('/', '')
-    print("fileName: " + file_name)
-    file_path = "./" + file_name.split(":")[0].replace('.', '_')
+    request_lines = recv_data.split('\r\n')
+    print(recv_data)
+    print()
+    request_line = request_lines[0].split()
+    path = request_line[1]
+    path = path.split("/")[-1]
     try:
-        file = open(file_path + "./index.html", 'rb')
+        with open('./' + path, 'rb') as file:
+            content = file.read()
         print("File is found in proxy server.")
-        response_msg = file.read()
-        client_socket.sendall(response_msg)
+        response = "HTTP/1.1 200 OK\r\n\r\n" + content.decode('utf-8')
+        response = response.encode('utf-8')
+        client_socket.sendall(response)
+        client_socket.close()
         print("Send, done.")
     except FileNotFoundError as e:
         print(f"File not found: {e}\nSend request to server...")
         try:
             proxy_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            server_name = file_name.split(":")[0]
-            proxy_client_socket.connect((server_name, 80))
-            proxy_client_socket.sendall(recv_data.encode("UTF-8"))
+            server_name = request_lines[1].split(":")[1]
+            server_name = server_name.lstrip()
+            proxy_client_socket.connect((server_name, 8080))
+            request_line = request_lines[0].split(' ')
+            path = request_line[1]
+            parts = path.split("/")
+            path = parts[-1]
+
+            # 构建符合标准格式的请求
+            print("-1")
+            standard_request = f"GET /{path} HTTP/1.1\r\n"
+            print("0")
+            proxy_client_socket.sendall(standard_request.encode("UTF-8"))
+            print("1")
             response_msg = proxy_client_socket.recv(4069)
             print("File is found in server.")
             client_socket.sendall(response_msg)
             print("Send, done.")
             # cache
-            if not os.path.exists(file_path):
-                os.makedirs(file_path)
-            cache = open(file_path + "./index.html", 'w')
-            cache.writelines(response_msg.decode("UTF-8").replace('\r\n', '\n'))
-            cache.close()
-            print("Cache, done.")
-        except Exception as e:
-            print(f"An error occurred: {e}\nConnect timeout.")
-            raise
+            # if not os.path.exists(file_path):
+            #     os.makedirs(file_path)
+            # cache = open(file_path + "./index.html", 'w')
+            # cache.writelines(response_msg.decode("UTF-8").replace('\r\n', '\n'))
+            # cache.close()
+            # print("Cache, done.")
+        except IOError:
+            response = "HTTP/1.1 404 Not Found\r\n\r\n404 Not Found"
+            response = response.encode('utf-8')
+            client_socket.sendall(response)
+            print("404 not found")
+            # raise
 
-        raise
+        # raise
 
 
 def start_proxy(port1):
     proxy_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     proxy_server_socket.bind(("", port1))
-    proxy_server_socket.listen(0)
+    proxy_server_socket.listen(1)
     while True:
         try:
             print("Proxy is waiting for connecting...")

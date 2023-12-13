@@ -48,6 +48,7 @@ def receive_one_ping(icmp_socket, id_number, time_out):
     # 3. Compare the time of receipt to time of sending, producing the total network delay
     byte_in_double = struct.calcsize("!d")
     time_sent = struct.unpack("!d", rec_packet[28: 28 + byte_in_double])[0]
+    # 因为ip头部的大小是20
     total_delay = time_received - time_sent
     # 4. Unpack the packet header for useful information, including the id_number
     rec_header = rec_packet[20:28]

@@ -89,14 +89,13 @@ def get_route(hostname):
                 time_left = time_left - time_during_receive
                 # 再次检查超时
                 if time_left <= 0:
-                    # print("  *        *        *    Request timed out."+" ttl="+ttl+" tries="+tries)
                     print(f"  *        *        *    Request timed out. ttl={ttl} tries={tries + 1}")
             except timeout:
                 print(f"  *        *        *    Request timed out. ttl={ttl} tries={tries + 1}")
                 # 超时则继续尝试
                 continue
             else:
-                printing(rec_packet, ttl, time_received, t, addr, icmp_socket)
+                printing(rec_packet, ttl, time_received, t, addr, icmp_socket, tries)
                 if destination_ip == addr[0] and tries == 2:
                     print(f" {hostname} is successfully reached")
                     return
@@ -105,7 +104,7 @@ def get_route(hostname):
                 icmp_socket.close()
 
 
-def printing(rec_packet, ttl, time_received, t, addr, icmp_socket):
+def printing(rec_packet, ttl, time_received, t, addr, icmp_socket, tries):
     byte_in_double = struct.calcsize("!d")
     time_sent = struct.unpack("!d", rec_packet[26: 26 + byte_in_double])[0]
     rec_header = rec_packet[20:26]
@@ -113,10 +112,10 @@ def printing(rec_packet, ttl, time_received, t, addr, icmp_socket):
     # 根据ICMP类型处理响应
     if types == 11 or types == 3:
         # 类型为11（TTL超时）或类型为3（目标不可达）时计算往返时间
-        print(f"  ttl={ttl}    rtt={(time_received - t) * 1000:.0f} ms    {addr[0]}")
+        print(f"  ttl1={ttl}    rtt={(time_received - t) * 1000:.0f} ms    {addr[0]}  tries={tries + 1}")
     elif types == 0:
         # 类型为0（回显应答）时计算往返时间，并结束traceroute
-        print(f"  ttl={ttl}    rtt={(time_received - time_sent) * 1000:.0f} ms    {addr[0]}")
+        print(f"  ttl={ttl}    rtt={(time_received - time_sent) * 1000:.0f} ms    {addr[0]}  tries={tries + 1}")
         icmp_socket.close()
 
     else:

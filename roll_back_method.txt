@@ -1,3 +1,5 @@
 只要在本地commit了就行
 1 使用git log查看id
 2 使用 git reset --hard id回退
+
+wget http://127.0.0.1:8080/1.html -e use_proxy=on -e http_proxy=127.0.0.1:8000
