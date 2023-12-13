@@ -9,9 +9,9 @@ ICMP_ECHO_REPLY = 0  # ICMP type code for echo reply messages
 ICMP_Type_Unreachable = 3  # unacceptable host
 ICMP_Type_Overtime = 11  # request overtime
 MAX_HOPS = 30
-TIMEOUT = 3  # 设置了每个跳数的超时时间
+global TIMEOUT
 big_end_sequence = '!bbHh'
-TRIES = 3  # 每一跳的尝试次数
+global TRIES  # 每一跳的尝试次数
 my_array = [0, 0, 0]
 
 
@@ -87,12 +87,8 @@ def get_route(hostname):
                 time_received = time.time()
                 # 更新剩余时间
                 time_left = time_left - time_during_receive
-                # 再次检查超时
-                if time_left <= 0:
-                    print(f"  *        *        *    Request timed out. ttl={ttl} tries={tries + 1}")
             except timeout:
-                print(f"  *        *        *    Request timed out. ttl={ttl} tries={tries + 1}")
-                # 超时则继续尝试
+                time_out(ttl, tries)
                 continue
             else:
                 printing(rec_packet, ttl, time_received, t, addr, icmp_socket, tries)
@@ -104,6 +100,12 @@ def get_route(hostname):
                 icmp_socket.close()
 
 
+def time_out(ttl, tries):
+    print(f"  *        *        *    Request timed out. ttl={ttl} tries={tries + 1}")
+    if tries == 2:
+        print()
+
+
 def printing(rec_packet, ttl, time_received, t, addr, icmp_socket, tries):
     byte_in_double = struct.calcsize("!d")
     time_sent = struct.unpack("!d", rec_packet[26: 26 + byte_in_double])[0]
@@ -113,6 +115,8 @@ def printing(rec_packet, ttl, time_received, t, addr, icmp_socket, tries):
     if types == 11 or types == 3:
         # 类型为11（TTL超时）或类型为3（目标不可达）时计算往返时间
         print(f"  ttl1={ttl}    rtt={(time_received - t) * 1000:.0f} ms    {addr[0]}  tries={tries + 1}")
+        if tries == 2:
+            print()
     elif types == 0:
         # 类型为0（回显应答）时计算往返时间，并结束traceroute
         print(f"  ttl={ttl}    rtt={(time_received - time_sent) * 1000:.0f} ms    {addr[0]}  tries={tries + 1}")
@@ -126,4 +130,7 @@ def printing(rec_packet, ttl, time_received, t, addr, icmp_socket, tries):
 if __name__ == '__main__':
     # 调用get_route函数进行traceroute，目标是baidu.com
     hostName = input("Input ip/name of the host you want: ")
+    TRIES = int(input("Input the tries you want: "))
+    TIMEOUT = int(input("Input the Timeout you want: "))
+
     get_route(hostName)

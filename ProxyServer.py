@@ -6,8 +6,8 @@ def handle_req(client_socket):
     # proxy使用了client_socket去和客户端通信，proxy_server_socket去监听客户端的请求，使用proxy_client_socket去与服务器沟通
     recv_data = client_socket.recv(1024).decode("UTF-8")
     request_lines = recv_data.split('\r\n')
-    print(recv_data)
     print()
+    print(recv_data)
     request_line = request_lines[0].split()
     path = request_line[1]
     path = path.split("/")[-1]
@@ -32,7 +32,6 @@ def handle_req(client_socket):
             parts = path.split("/")
             path = parts[-1]
 
-            # 构建符合标准格式的请求
             print("-1")
             standard_request = f"GET /{path} HTTP/1.1\r\n"
             print("0")
@@ -42,13 +41,15 @@ def handle_req(client_socket):
             print("File is found in server.")
             client_socket.sendall(response_msg)
             print("Send, done.")
-            # cache
-            # if not os.path.exists(file_path):
-            #     os.makedirs(file_path)
-            # cache = open(file_path + "./index.html", 'w')
-            # cache.writelines(response_msg.decode("UTF-8").replace('\r\n', '\n'))
-            # cache.close()
-            # print("Cache, done.")
+            print()
+            body_start = response_msg.find(b'\r\n\r\n') + 4
+
+            # 提取响应体
+            html_content = response_msg[body_start:]
+
+            # 将 HTML 内容保存到文件
+            with open(path, 'wb') as file:
+                file.write(html_content)
         except IOError:
             response = "HTTP/1.1 404 Not Found\r\n\r\n404 Not Found"
             response = response.encode('utf-8')

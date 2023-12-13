@@ -1,41 +1,45 @@
-import sys
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMainWindow
-from PyQt5.QtWebEngineWidgets import QWebEngineView
+import socket
+import webbrowser
 
-class HTMLViewer(QMainWindow):
-    def __init__(self, html_content):
-        super().__init__()
 
-        # 设置窗口属性
-        self.setWindowTitle("HTML Viewer")
-        self.setGeometry(100, 100, 800, 600)
+def send_get_request(host, port, path):
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        # 创建 WebEngineView 组件
-        self.webview = QWebEngineView()
-        self.setCentralWidget(self.webview)
+    try:
+        client_socket.connect((host, port))
 
-        # 在 WebEngineView 中加载 HTML 内容
-        self.webview.setHtml(html_content)
+        request = f"GET {path} HTTP/1.1\r\nHost: {host}:{port}\r\n\r\n"
+
+        client_socket.sendall(request.encode("utf-8"))
+
+        # 接收服务器响应
+        response = b""
+        while True:
+            data = client_socket.recv(1024)
+            if not data:
+                break
+            response += data
+
+        # 关闭 socket
+        client_socket.close()
+
+        # 解析响应，提取 HTML 内容
+        html_content = response.split(b'\r\n\r\n', 1)[1].decode("utf-8")
+        print(html_content)
+        # 将 HTML 内容保存到一个临时文件
+        with open('temp_response.html', 'w', encoding='utf-8') as file:
+            file.write(html_content)
+
+        # 在默认浏览器中打开响应
+        webbrowser.open('temp_response.html')
+
+    except Exception as e:
+        print(f"发生异常: {str(e)}")
+        client_socket.close()
+
 
 if __name__ == "__main__":
-    # 替换为你的服务器地址和端口，以及要获取的 HTML 文件路径
-    server_host = '127.0.0.1'
-    server_port = 8080
-    target_url = f"http://{server_host}:{server_port}/1.html"
-
-    # 发送 GET 请求获取 HTML 内容
-    response = requests.get(target_url)
-    html_content = response.text
-
-    # 创建应用程序对象
-    app = QApplication(sys.argv)
-
-    # 创建 HTMLViewer 实例
-    viewer = HTMLViewer(html_content)
-
-    # 显示窗口
-    viewer.show()
-
-    # 运行应用程序
-    sys.exit(app.exec_())
+    target_host = "127.0.0.1"
+    target_port = 8080
+    target_path = "/1.html"
+    send_get_request(target_host, target_port, target_path)

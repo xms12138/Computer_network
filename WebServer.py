@@ -5,7 +5,6 @@ import mimetypes
 def handle_request(request):
     # 解析请求
     request_lines = request.split('\r\n')
-    print(request_lines)
     request_line = request_lines[0].split()
 
     # 获取请求的方法、路径和协议版本
@@ -62,6 +61,8 @@ def start_server(host1, port1):
 
 
 if __name__ == "__main__":
-    host = '127.0.0.1'
-    port = 8080
+    host = input("Input the host you want: ")
+    port = int(input("Input the port you want: "))
+    # host = '127.0.0.1'
+    # port = 8080
     start_server(host, port)
