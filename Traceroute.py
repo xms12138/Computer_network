@@ -101,7 +101,7 @@ def get_route(hostname):
 
 
 def time_out(ttl, tries):
-    print(f"  *        *        *    Request timed out. ttl={ttl} tries={tries + 1}")
+    print(f"  *  Request timed out. ttl={ttl} tries={tries + 1}")
     if tries == 2:
         print()
 
@@ -114,7 +114,7 @@ def printing(rec_packet, ttl, time_received, t, addr, icmp_socket, tries):
     # 根据ICMP类型处理响应
     if types == 11 or types == 3:
         # 类型为11（TTL超时）或类型为3（目标不可达）时计算往返时间
-        print(f"  ttl1={ttl}    rtt={(time_received - t) * 1000:.0f} ms    {addr[0]}  tries={tries + 1}")
+        print(f"  ttl={ttl}    rtt={(time_received - t) * 1000:.0f} ms    {addr[0]}  tries={tries + 1}")
         if tries == 2:
             print()
     elif types == 0:

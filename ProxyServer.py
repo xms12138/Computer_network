@@ -1,6 +1,8 @@
 import os
 import socket
 
+global listen_port
+
 
 def handle_req(client_socket):
     # proxy使用了client_socket去和客户端通信，proxy_server_socket去监听客户端的请求，使用proxy_client_socket去与服务器沟通
@@ -26,7 +28,7 @@ def handle_req(client_socket):
             proxy_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_name = request_lines[1].split(":")[1]
             server_name = server_name.lstrip()
-            proxy_client_socket.connect((server_name, 8080))
+            proxy_client_socket.connect((server_name, listen_port))
             request_line = request_lines[0].split(' ')
             path = request_line[1]
             parts = path.split("/")
@@ -82,6 +84,7 @@ if __name__ == '__main__':
         port = None
         try:
             port = int(input("choose a port number over 1024:"))
+            listen_port = int(input("choose a listen_port :"))
         except ValueError:
             print("Please input an integer rather than {0}".format(type(port)))
             continue

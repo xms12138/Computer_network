@@ -10,7 +10,6 @@ def handle_request(request):
     # 获取请求的方法、路径和协议版本
     method = request_line[0]
     path = request_line[1]
-    print(path)
     # 处理 GET 请求
     if method == 'GET':
         try:
@@ -63,6 +62,5 @@ def start_server(host1, port1):
 if __name__ == "__main__":
     host = input("Input the host you want: ")
     port = int(input("Input the port you want: "))
-    # host = '127.0.0.1'
-    # port = 8080
+
     start_server(host, port)
